@@ -11,12 +11,6 @@ import InventoryTable from "./components/InventoryTable";
 import LogisticsForecast from "./components/LogisticsForecast";
 import PersonnelRoster from "./components/PersonnelRoster";
 
-// --- HELPER: Safely clamp floating point numbers ---
-const formatMetric = (val, decimals = 1) => {
-  if (val === undefined || val === null || isNaN(val)) return "0";
-  return Number(val).toFixed(decimals);
-};
-
 export default function Logistics() {
   const { activeStation = "Maitri" } = useOutletContext() || {};
   
@@ -30,6 +24,7 @@ export default function Logistics() {
   useEffect(() => {
     let isMounted = true;
     const fetchLogistics = async () => {
+      // Only set loading to true on first mount to prevent UI flashing
       if (!data) setLoading(true);
       setError(null);
       try {
@@ -42,7 +37,10 @@ export default function Logistics() {
       }
     };
     
+    // Initial fetch
     fetchLogistics();
+    
+    // Silent background polling every 30s
     const intervalId = setInterval(fetchLogistics, 30000);
     
     return () => { 
@@ -51,6 +49,9 @@ export default function Logistics() {
     };
   }, [activeStation]);
 
+  // =========================================================================
+  // OPTIMIZED SKELETON LOADING STATE
+  // =========================================================================
   if (loading && !data) {
     return (
       <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 md:px-6 md:py-6 lg:gap-6 w-full bg-amber-50 dark:bg-slate-950 font-sans">
@@ -81,12 +82,6 @@ export default function Logistics() {
       </div>
     );
   }
-
-  // Safe extractions to prevent undefined errors
-  const fuel = data?.fuel_reserves?.primary_tank || {};
-  const emergencyFuel = data?.fuel_reserves?.emergency_reserve || {};
-  const food = data?.supplies?.food || {};
-  const backendLedger = data?.inventory_ledger || data?.items || [];
 
   return (
     <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 md:px-6 md:py-6 lg:gap-6 w-full bg-amber-50 dark:bg-slate-950 font-sans transition-colors duration-300">
@@ -122,6 +117,9 @@ export default function Logistics() {
 
       {/* CONDITIONAL RENDERING */}
       {viewMode === "overview" ? (
+        // ---------------------------------------------------------------------
+        // MODE 1: VISUAL OVERVIEW DASHBOARD
+        // ---------------------------------------------------------------------
         <div className="flex flex-col gap-4 lg:gap-6 animate-in fade-in duration-300">
           <LogisticsKpiGrid logisticsJson={data} />
 
@@ -143,113 +141,10 @@ export default function Logistics() {
         </div>
       ) : (
         // ---------------------------------------------------------------------
-        // MODE 2: INVENTORY LEDGER (Dynamic mapping from Database + Core Items)
+        // MODE 2: INVENTORY LEDGER (Using your reusable component!)
         // ---------------------------------------------------------------------
-        <div className="rounded-2xl border border-slate-200/80 bg-white/70 backdrop-blur-md p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] dark:border-slate-800/80 dark:bg-slate-950/60 animate-in fade-in zoom-in-95 duration-300 overflow-x-auto">
-          <table className="w-full text-left text-sm min-w-[800px]">
-            <thead className="border-b border-slate-200 dark:border-slate-800 text-[0.65rem] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-              <tr>
-                <th className="pb-3 px-4">Item / Category</th>
-                <th className="pb-3 px-4">Current Stock</th>
-                <th className="pb-3 px-4">Capacity / Max</th>
-                <th className="pb-3 px-4">Burn Rate</th>
-                <th className="pb-3 px-4 text-right">Status</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
-              
-              {/* Core Fuel Row */}
-              <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
-                <td className="py-4 px-4 font-bold text-slate-900 dark:text-slate-100">
-                  Primary Diesel Fuel
-                  <span className="block text-[0.6rem] font-medium text-slate-500 mt-0.5">Energy / Consumable</span>
-                </td>
-                <td className="py-4 px-4 font-mono font-bold text-cyan-600 dark:text-cyan-400">
-                  {Math.round(fuel.current_level_liters || 0).toLocaleString()} L
-                </td>
-                <td className="py-4 px-4 font-mono text-slate-600 dark:text-slate-400">
-                  {Math.round(fuel.total_capacity_liters || 50000).toLocaleString()} L
-                </td>
-                <td className="py-4 px-4 font-mono text-slate-600 dark:text-slate-400">
-                  {formatMetric(fuel.consumption_rate_liters_per_day, 0)} L/day
-                </td>
-                <td className="py-4 px-4 text-right">
-                  <span className={`inline-flex px-2 py-1 rounded-md text-[0.6rem] font-bold uppercase tracking-wider ${(fuel.current_level_percent || 100) > 30 ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>
-                    {(fuel.current_level_percent || 100) > 30 ? 'Adequate' : 'Low Warning'}
-                  </span>
-                </td>
-              </tr>
-
-              {/* Core Food Row */}
-              <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
-                <td className="py-4 px-4 font-bold text-slate-900 dark:text-slate-100">
-                  Standard Rations
-                  <span className="block text-[0.6rem] font-medium text-slate-500 mt-0.5">Supplies / Food</span>
-                </td>
-                <td className="py-4 px-4 font-mono font-bold text-amber-600 dark:text-amber-400">
-                  {Math.round(food.current_stock_kg || 0).toLocaleString()} kg
-                </td>
-                <td className="py-4 px-4 font-mono text-slate-600 dark:text-slate-400">
-                  4,000 kg
-                </td>
-                <td className="py-4 px-4 font-mono text-slate-600 dark:text-slate-400">
-                  30 kg/day
-                </td>
-                <td className="py-4 px-4 text-right">
-                  <span className={`inline-flex px-2 py-1 rounded-md text-[0.6rem] font-bold uppercase tracking-wider ${food.status === 'adequate' ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'}`}>
-                    {food.status || "Adequate"}
-                  </span>
-                </td>
-              </tr>
-
-              {/* Core Emergency Fuel Row */}
-              <tr className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
-                <td className="py-4 px-4 font-bold text-slate-900 dark:text-slate-100">
-                  Emergency Fuel Reserve
-                  <span className="block text-[0.6rem] font-medium text-slate-500 mt-0.5">Energy / Secured</span>
-                </td>
-                <td className="py-4 px-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                  {Math.round(emergencyFuel.current_level_liters || 0).toLocaleString()} L
-                </td>
-                <td className="py-4 px-4 font-mono text-slate-600 dark:text-slate-400">
-                  {Math.round(emergencyFuel.total_capacity_liters || 10000).toLocaleString()} L
-                </td>
-                <td className="py-4 px-4 font-mono text-slate-600 dark:text-slate-400">
-                  0 L/day (Locked)
-                </td>
-                <td className="py-4 px-4 text-right">
-                  <span className="inline-flex px-2 py-1 rounded-md text-[0.6rem] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
-                    Sealed
-                  </span>
-                </td>
-              </tr>
-
-              {/* DYNAMIC DATABASE ROWS (Mapped from backend inventory ledger) */}
-              {backendLedger.map((item, idx) => (
-                <tr key={idx} className="hover:bg-slate-50/50 dark:hover:bg-slate-900/50 transition-colors">
-                  <td className="py-4 px-4 font-bold text-slate-900 dark:text-slate-100">
-                    {item.item_name || item.item || "Custom Item"}
-                    <span className="block text-[0.6rem] font-medium text-slate-500 mt-0.5">{item.category || "General Supplies"}</span>
-                  </td>
-                  <td className="py-4 px-4 font-mono font-bold text-cyan-600 dark:text-cyan-400">
-                    {item.current_stock || item.qty || 0} Units
-                  </td>
-                  <td className="py-4 px-4 font-mono text-slate-600 dark:text-slate-400">
-                    {item.capacity_max || "N/A"}
-                  </td>
-                  <td className="py-4 px-4 font-mono text-slate-600 dark:text-slate-400">
-                    {item.burn_rate || "Incidental"}
-                  </td>
-                  <td className="py-4 px-4 text-right">
-                    <span className="inline-flex px-2 py-1 rounded-md text-[0.6rem] font-bold uppercase tracking-wider bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                      {item.status || "Adequate"}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-
-            </tbody>
-          </table>
+        <div className="animate-in fade-in zoom-in-95 duration-300 h-full min-h-[500px]">
+          <InventoryTable logisticsJson={data} />
         </div>
       )}
 

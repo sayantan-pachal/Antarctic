@@ -47,7 +47,7 @@ export default function Signup({ onSwitchMode }) {
         }
     };
 
-    // Handles the Final Submission (Step 3 -> Dashboard)
+// Handles the Final Submission (Step 3 -> Dashboard)
     const handleFinalSignup = async (e) => {
         e.preventDefault();
         
@@ -57,7 +57,7 @@ export default function Signup({ onSwitchMode }) {
         payload.append("email", formData.email);
         payload.append("password", formData.password);
         payload.append("role", formData.role); 
-        payload.append("otp", otp); // <--- Added OTP to payload
+        payload.append("otp", otp);
         
         if (formData.role === "station_master") {
             payload.append("station", formData.station);
@@ -67,14 +67,18 @@ export default function Signup({ onSwitchMode }) {
 
         setLoading(true);
         try {
-            await authAPI.register(payload);
+            // Capture the response from your backend registration route
+            const res = await authAPI.register(payload);
+            const userObj = res.data?.user || {};
 
             localStorage.setItem("polar_twin_user", JSON.stringify({
-                fullName: formData.fullName,
-                email: formData.email,
-                role: formData.role,
-                station: formData.role === "station_master" ? formData.station : null,
-                avatar: "" 
+                fullName: userObj.fullName || formData.fullName,
+                username: userObj.username || formData.username,
+                email: userObj.email || formData.email,
+                role: userObj.role || formData.role,
+                station: userObj.station || (formData.role === "station_master" ? formData.station : null),
+                avatar: userObj.avatar || "",
+                createdAt: userObj.createdAt || new Date().toISOString()
             }));
 
             showToast("Clearance granted. Welcome to Polar Twin.", "success");

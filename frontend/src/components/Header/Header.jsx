@@ -167,11 +167,6 @@ export default function Header({ alerts = [], lastUpdate = "Just now", activeSta
                       </Link>
                     </li>
                     <li>
-                      <Link to="/settings" onClick={() => setUserOpen(false)} className="flex items-center px-4 py-2 hover:bg-amber-100/80 dark:hover:bg-slate-700 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">
-                        <Settings className="w-4 h-4 mr-3" /> System Settings
-                      </Link>
-                    </li>
-                    <li>
                       <Link to="/resetpassword" onClick={() => setUserOpen(false)} className="flex items-center px-4 py-2 hover:bg-amber-100/80 dark:hover:bg-slate-700 hover:text-cyan-600 dark:hover:text-cyan-400 transition-colors">
                         <KeyRound className="w-4 h-4 mr-3" /> Reset Password
                       </Link>

@@ -83,9 +83,12 @@ exports.register = async (req, res) => {
             data: { 
                 user: { 
                     fullName: user.fullName, 
+                    username: user.username,
                     email: user.email, 
                     role: user.role, 
-                    avatar: user.avatar 
+                    station: user.station,
+                    avatar: user.avatar,
+                    createdAt: user.createdAt
                 } 
             }
         });
@@ -114,9 +117,12 @@ exports.login = async (req, res) => {
             data: {
                 user: {
                     fullName: user.fullName,
+                    username: user.username,
                     email: user.email,
                     role: user.role,
-                    avatar: user.avatar
+                    station: user.station,
+                    avatar: user.avatar,
+                    createdAt: user.createdAt
                 }
             }
         });

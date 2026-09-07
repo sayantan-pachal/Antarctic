@@ -4,21 +4,22 @@ const environmentEngine = require('./engines/environmentEngine');
 const energyEngine = require('./engines/energyEngine');
 const infraEngine = require('./engines/infraEngine');
 const alertEngine = require('./engines/alertEngine');
-const logisticsEngine = require('./engines/logisticsEngine'); // <-- Added Logistics Engine
+const logisticsEngine = require('./engines/logisticsEngine');
 
-const Logistics = require('../models/Inventory'); // <-- Added MongoDB Model
+const Logistics = require('../models/Inventory');
 
-// 1. FACTORY FUNCTION: Generates the COMPLETE baseline schema for a specific station
+// ============================================================================
+// 1. FACTORY FUNCTION: Generates the COMPLETE baseline schema
+// ============================================================================
 const generateInitialState = (stationId, profile) => {
+    const isMaitri = stationId === "Maitri";
+    
     return {
         station_id: stationId,
         station_name: `${stationId} Antarctic Research Station`,
         timestamp: new Date().toISOString(),
         polling_interval_seconds: 2,
         
-        // ==========================================
-        // 1. ENERGY & POWER SYSTEMS
-        // ==========================================
         energy: {
             generators: {
                 gen_1: {
@@ -58,9 +59,6 @@ const generateInitialState = (stationId, profile) => {
             interconnections: { critical_alert: "NONE", alert_description: "Grid stable.", recommended_action: "None", severity: "INFO" }
         },
 
-        // ==========================================
-        // 2. ENVIRONMENT & WEATHER
-        // ==========================================
         environment: {
             exterior_conditions: {
                 temperature: { outside_temperature_c: profile.baseTemp, temperature_trend: "stable", temperature_rate_of_change_c_per_hour: -0.5, thresholds: { extreme_cold_c: -50, severe_cold_c: -40, warning_cold_c: -35 }, alerts: { is_extreme_cold: false, is_severe_cold: false, is_warning_cold: profile.baseTemp <= -35 } },
@@ -91,9 +89,6 @@ const generateInitialState = (stationId, profile) => {
             }))
         },
 
-        // ==========================================
-        // 3. INFRASTRUCTURE & MODULES
-        // ==========================================
         infrastructure: {
             modules: {
                 living_quarters: {
@@ -138,22 +133,125 @@ const generateInitialState = (stationId, profile) => {
                 { id: "AL-Storage", status: "secure", cycles: 3, pressureDrop_psi: 0.02 }
             ]
         },
-        health: {} // Evaluated dynamically by alertEngine
+
+        logistics: {
+            station_id: stationId,
+            last_updated: new Date().toISOString(),
+            data_freshness_hours: 6,
+            supplies: {
+                food: {
+                    item_id: "SUPPLY-FOOD-001",
+                    current_stock_days: isMaitri ? 45 : 72,
+                    daily_consumption_kg: isMaitri ? 85 : 120,
+                    current_stock_kg: isMaitri ? 3825 : 8640,
+                    max_capacity_kg: isMaitri ? 5000 : 10000,
+                    storage_location: "storage_module",
+                    thresholds: { critical_low_days: 14, warning_low_days: 30, optimal_stock_days: 60 },
+                    status: "adequate",
+                    status_values: ["adequate", "low", "critical"],
+                    status_color: "green",
+                    consumption_forecast: { estimated_depletion_date: "2026-09-18", days_to_critical: 14, recommendation: "Schedule resupply before 2026-09-10" }
+                },
+                medical: {
+                    item_id: "SUPPLY-MEDICAL-001",
+                    current_stock_percent: isMaitri ? 87 : 94,
+                    total_units: isMaitri ? 450 : 800,
+                    critical_items: [
+                        { item: "Antibiotics", stock_percent: isMaitri ? 92 : 98, status: "adequate" },
+                        { item: "Trauma kits", stock_percent: isMaitri ? 78 : 90, status: "adequate" }
+                    ],
+                    thresholds: { critical_low_percent: 20, warning_low_percent: 40, optimal_stock_percent: 80 },
+                    status: "adequate",
+                    status_color: "green"
+                },
+                spare_parts: {
+                    item_id: "SUPPLY-PARTS-001",
+                    categories: {
+                        generator_parts: { fuel_filters: 12, oil_filters: 15, spark_plugs: 8, status: "adequate" },
+                        hvac_components: { air_filters: 20, heating_elements: 3, thermostat_units: 2, status: "adequate" }
+                    },
+                    overall_status: "adequate",
+                    status_color: "green"
+                }
+            },
+            fuel_reserves: {
+                item_id: "SUPPLY-FUEL-001",
+                emergency_reserve_liters: isMaitri ? 10000 : 25000,
+                reserve_purpose: "Emergency power for critical systems only",
+                reserve_status_percent: 100,
+                reserve_status: "full",
+                status_color: "green",
+                thresholds: { critical_depletion_percent: 5, warning_depletion_percent: 15 },
+                note: "Emergency reserve is LOCKED",
+                primary_tank: {
+                    current_level_liters: isMaitri ? 38250 : 75000,
+                    total_capacity_liters: isMaitri ? 50000 : 90000,
+                    current_level_percent: isMaitri ? 76.5 : 83.3,
+                    consumption_rate_liters_per_day: isMaitri ? 2040 : 3100,
+                    days_until_empty: isMaitri ? 18.8 : 24.1
+                }
+            },
+            personnel: {
+                total_personnel: isMaitri ? 12 : 24,
+                on_station_count: isMaitri ? 12 : 24,
+                in_transit_count: 0,
+                field_teams_active: isMaitri ? 1 : 3,
+                breakdown: isMaitri 
+                    ? { scientists: 6, technicians: 4, medical_officer: 1, station_leader: 1 }
+                    : { scientists: 14, technicians: 7, medical_officer: 2, station_leader: 1 },
+                personnel_list: [],
+                incoming_personnel: [],
+                departing_personnel: isMaitri ? [
+                    { name: "Dr. Priya Sharma", departure_date: "2026-09-15", role: "Climate Researcher" }
+                ] : [
+                    { name: "Tech. Rohan Gupta", departure_date: "2026-10-02", role: "Comm Specialist" },
+                    { name: "Dr. Ananya Desai", departure_date: "2026-10-02", role: "Marine Biologist" }
+                ]
+            },
+            shipments: {
+                incoming: isMaitri ? [
+                    {
+                        shipment_id: "SHIP-MIT-001",
+                        eta_date: "2026-09-01",
+                        eta_days: 8,
+                        shipment_status: "in_transit",
+                        priority: "high",
+                        criticality: "Important for winter operations"
+                    }
+                ] : [
+                    {
+                        shipment_id: "SHIP-BHA-099",
+                        eta_date: "2026-09-12",
+                        eta_days: 19,
+                        shipment_status: "scheduled",
+                        priority: "medium",
+                        criticality: "Routine Science Resupply"
+                    }
+                ],
+                outgoing: [],
+                logistics_forecast: { 
+                    days_until_critical_resupply_needed: isMaitri ? 14 : 22, 
+                    next_critical_shipment_eta: isMaitri ? "2026-09-01" : "2026-09-12", 
+                    risk_assessment: "On track for winter operations" 
+                }
+            },
+            interdependencies: {
+                food_vs_personnel: { description: "Adequate person-days remaining", current_status: "adequate" },
+                fuel_vs_operations: { description: "Primary tank supports continuous operations", resupply_urgency: "medium" }
+            },
+            alerts_local: [],
+            system_health_score: isMaitri ? 92 : 98,
+            overall_logistics_status: "healthy",
+            inventory_ledger: [],
+            recent_deliveries: []
+        },
+
+        health: {} 
     };
 };
 
-// 2. STATION PROFILES
-const maitriProfile = { 
-    baseTemp: -38.5, baseWind: 55.0, baseLoad: 245.5, baseGen: 185.5, 
-    efficiency: 88, batteryHealth: 55, genRuntime: 4250, fuelBurn: 85.0,
-    solarKW: 20, solarRadiation: 150, snowLoad: 18000, integrity: 92
-};
-
-const bharatiProfile = { 
-    baseTemp: -12.4, baseWind: 25.0, baseLoad: 160.0, baseGen: 220.0, 
-    efficiency: 98, batteryHealth: 98, genRuntime: 1200, fuelBurn: 65.0,
-    solarKW: 85, solarRadiation: 450, snowLoad: 4000, integrity: 99
-};
+const maitriProfile = { baseTemp: -38.5, baseWind: 55.0, baseLoad: 245.5, baseGen: 185.5, efficiency: 88, batteryHealth: 55, genRuntime: 4250, fuelBurn: 85.0, solarKW: 20, solarRadiation: 150, snowLoad: 18000, integrity: 92 };
+const bharatiProfile = { baseTemp: -12.4, baseWind: 25.0, baseLoad: 160.0, baseGen: 220.0, efficiency: 98, batteryHealth: 98, genRuntime: 1200, fuelBurn: 65.0, solarKW: 85, solarRadiation: 450, snowLoad: 4000, integrity: 99 };
 
 const dbMemory = {
     Maitri: generateInitialState("Maitri", maitriProfile),
@@ -161,17 +259,30 @@ const dbMemory = {
 };
 
 // ============================================================================
-// 3. DATABASE INITIALIZATION: Pull Logistics from MongoDB to RAM
+// 3. DATABASE INITIALIZATION: Read Only What We Need
 // ============================================================================
 const initializeDatabaseLink = async () => {
     try {
         const maitriLog = await Logistics.findOne({ station_id: "Maitri" }).lean();
         const bharatiLog = await Logistics.findOne({ station_id: "Bharati" }).lean();
         
-        if (maitriLog) dbMemory["Maitri"].logistics = maitriLog;
-        if (bharatiLog) dbMemory["Bharati"].logistics = bharatiLog;
+        // We DO NOT overwrite the entire logistics object anymore.
+        // We only pull the specific numbers that were saved to DB so we don't lose them on reboot.
+        if (maitriLog) {
+            if (maitriLog.supplies?.food?.current_stock_kg) dbMemory["Maitri"].logistics.supplies.food.current_stock_kg = maitriLog.supplies.food.current_stock_kg;
+            if (maitriLog.fuel_reserves?.primary_tank?.current_level_liters) dbMemory["Maitri"].logistics.fuel_reserves.primary_tank.current_level_liters = maitriLog.fuel_reserves.primary_tank.current_level_liters;
+            dbMemory["Maitri"].logistics.inventory_ledger = maitriLog.inventory_ledger || [];
+            dbMemory["Maitri"].logistics.recent_deliveries = maitriLog.recent_deliveries || [];
+        }
         
-        console.log("Twin Engine: Database Logistics Loaded into RAM.");
+        if (bharatiLog) {
+            if (bharatiLog.supplies?.food?.current_stock_kg) dbMemory["Bharati"].logistics.supplies.food.current_stock_kg = bharatiLog.supplies.food.current_stock_kg;
+            if (bharatiLog.fuel_reserves?.primary_tank?.current_level_liters) dbMemory["Bharati"].logistics.fuel_reserves.primary_tank.current_level_liters = bharatiLog.fuel_reserves.primary_tank.current_level_liters;
+            dbMemory["Bharati"].logistics.inventory_ledger = bharatiLog.inventory_ledger || [];
+            dbMemory["Bharati"].logistics.recent_deliveries = bharatiLog.recent_deliveries || [];
+        }
+        
+        console.log("Twin Engine: Live Logistics Initialized in RAM.");
     } catch (err) {
         console.error("Failed to link Logistics DB to Twin Engine:", err);
     }
@@ -180,62 +291,123 @@ const initializeDatabaseLink = async () => {
 initializeDatabaseLink();
 
 // ============================================================================
-// 4. THE PHYSICS LOOP: Fast 2-second RAM updates (No DB writes)
+// 4. THE PHYSICS LOOP (Runs every 2 seconds independently)
 // ============================================================================
 setInterval(() => {
     const now = new Date().toISOString();
-
     Object.keys(dbMemory).forEach(station => {
         let state = dbMemory[station];
         state.timestamp = now;
 
-        // Run sub-engines sequentially
         state.environment = environmentEngine.tick(state.environment);
         state.energy = energyEngine.tick(state.energy, state.environment);
         state.infrastructure = infraEngine.tick(state.infrastructure, state.environment, state.energy);
 
-        // Logistics burns dynamically in RAM (assuming 12 personnel)
         if (state.logistics) {
             state.logistics = logisticsEngine.tick(state.logistics, state.energy, 12);
         }
-
-        // Run alert engine on complete current state
         state.health = alertEngine.evaluate(state);
     });
 }, 2000); 
 
 // ============================================================================
-// 5. DATABASE SYNC LOOP: Saves RAM back to MongoDB every 5 minutes
+// 5. DATABASE SYNC LOOP: Restricted to Keep Database Clean
 // ============================================================================
 setInterval(async () => {
     try {
         for (const station of Object.keys(dbMemory)) {
-            if (dbMemory[station].logistics) {
-                // Update MongoDB with the newly depleted fuel/food levels
+            const logisticsData = dbMemory[station].logistics;
+            if (logisticsData) {
+                // We ONLY save the manually added ledger, deliveries, and the depleted amounts. 
+                // We do NOT dump the entire massive schema into the database!
                 await Logistics.findOneAndUpdate(
                     { station_id: station },
-                    { $set: dbMemory[station].logistics }
+                    { $set: {
+                        "supplies.food.current_stock_kg": logisticsData.supplies.food.current_stock_kg,
+                        "fuel_reserves.primary_tank.current_level_liters": logisticsData.fuel_reserves.primary_tank.current_level_liters,
+                        "inventory_ledger": logisticsData.inventory_ledger,
+                        "recent_deliveries": logisticsData.recent_deliveries
+                    }},
+                    { upsert: true }
                 );
             }
         }
-        console.log("Twin Engine: Database Sync Complete.");
+        console.log("Twin Engine: Database Sync Complete (Ledger & Burn Rates only).");
     } catch (err) {
         console.error("Twin Engine DB Sync Error:", err);
     }
-}, 300000); // 300,000 ms = 5 minutes
-
+}, 300000); 
 
 // ============================================================================
-// 6. EXPORTS
+// 6. LIVE INJECTION: Called by Order Controller when items arrive
 // ============================================================================
+exports.injectDelivery = (stationId, category, quantity, itemName, userFullName) => {
+    const state = dbMemory[stationId];
+    if (!state || !state.logistics) return;
 
-// Full telemetry export
+    const qtyNum = Number(quantity);
+
+    // STRICT MATCHING: Using your exact frontend Dropdown 'value' strings
+    if (category === "Fuel" && state.logistics.fuel_reserves?.primary_tank) {
+        // Intercepts Dropdown "Fuel" -> Dumps instantly into the live burning tank
+        state.logistics.fuel_reserves.primary_tank.current_level_liters += qtyNum;
+    } 
+    else if (category === "Food" && state.logistics.supplies?.food) {
+        // Intercepts Dropdown "Food" -> Dumps instantly into the live crew rations
+        state.logistics.supplies.food.current_stock_kg += qtyNum;
+    } 
+    else if (category === "Medical" && state.logistics.supplies?.medical) {
+        // Intercepts Dropdown "Medical" -> Adds to total Medical Units
+        state.logistics.supplies.medical.total_units += qtyNum;
+    } 
+    else {
+        // STATIC LEDGER: Dropdowns "Mechanical" and "Scientific" go here.
+        if (!state.logistics.inventory_ledger) state.logistics.inventory_ledger = [];
+        
+        // We still check the item name so we can stack quantities of the same part
+        const existingItem = state.logistics.inventory_ledger.find(
+            i => (i.item_name || "").toLowerCase() === (itemName || "").toLowerCase()
+        );
+
+        if (existingItem) {
+            existingItem.current_stock = (Number(existingItem.current_stock) || 0) + qtyNum;
+            existingItem.status = "Restocked";
+        } else {
+            state.logistics.inventory_ledger.push({
+                item_name: itemName,
+                category: category, // This will correctly say "Mechanical" or "Scientific"
+                current_stock: qtyNum,
+                capacity_max: qtyNum * 3, // Arbitrary visual max
+                burn_rate: "Incidental",
+                status: "Newly Delivered"
+            });
+        }
+    }
+
+    // ALWAYS log to Recent Deliveries for the "Fleet Readiness" UI history
+    if (!state.logistics.recent_deliveries) state.logistics.recent_deliveries = [];
+    state.logistics.recent_deliveries.unshift({
+        item: itemName,
+        category: category,
+        qty: qtyNum,
+        delivered_by: userFullName,
+        timestamp: new Date()
+    });
+
+    // Keep log trimmed to the last 10 deliveries to prevent memory bloat
+    if (state.logistics.recent_deliveries.length > 10) {
+        state.logistics.recent_deliveries.pop();
+    }
+};
+
+// ============================================================================
+// 7. EXPORTS
+// ============================================================================
 exports.getLiveTelemetry = (stationId) => {
     if (!dbMemory[stationId]) throw new Error(`Station ${stationId} not found.`);
     return dbMemory[stationId];
 };
 
-// Dedicated alert endpoint export (returns the exact schema requested)
 exports.getStationAlerts = (stationId) => {
     if (!dbMemory[stationId]) throw new Error(`Station ${stationId} not found.`);
     return alertEngine.evaluate(dbMemory[stationId]);

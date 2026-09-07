@@ -12,7 +12,7 @@ import ModuleDiagnostics from "./components/ModuleDiagnostics";
 import MaintenancePanel from "./components/MaintenancePanel";
 import { ShieldCheck, Snowflake, Activity, Fan } from "lucide-react";
 
-// --- NEW HELPER: Safely clamp floating point numbers ---
+// --- HELPER: Safely clamp floating point numbers ---
 const formatMetric = (val, decimals = 1) => {
   if (val === undefined || val === null || isNaN(val)) return "0";
   return Number(val).toFixed(decimals);
@@ -54,35 +54,26 @@ export default function Infrastructure() {
       }
     };
 
-    // 1. Fetch immediately on mount or station change
     fetchInfra(false);
 
-    // 2. Set up the 30-second silent background polling
     const intervalId = setInterval(() => {
       fetchInfra(true);
     }, 30000);
 
-    // 3. Cleanup on unmount or station change
     return () => { 
       clearInterval(intervalId);
       abortController.abort(); 
     };
   }, [activeStation]);
 
-  // =========================================================================
-  // OPTIMIZED SKELETON LOADING STATE
-  // =========================================================================
   if (loading) {
     return (
       <div className="mx-auto flex max-w-[1600px] flex-col gap-4 px-4 py-4 md:px-6 md:py-6 lg:gap-6 w-full bg-amber-50 dark:bg-slate-950 font-sans">
-        
-        {/* Header Skeleton */}
         <div className="mb-2 space-y-2">
           <Skeleton className="h-8 w-64" />
           <Skeleton className="h-4 w-96 max-w-full" />
         </div>
 
-        {/* Row 1: KPI Grid Skeleton */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
           {[1, 2, 3, 4].map((i) => (
             <div key={i} className="flex flex-col sm:flex-row items-start sm:items-center gap-2.5 sm:gap-4 rounded-2xl border border-slate-200/80 bg-white/50 backdrop-blur-md p-3.5 sm:p-5 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] dark:border-slate-800/80 dark:bg-slate-900/40">
@@ -95,7 +86,6 @@ export default function Infrastructure() {
           ))}
         </div>
 
-        {/* Row 2: Chart & Airlocks Skeleton */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2 flex flex-col rounded-2xl border border-slate-200/80 bg-white/50 backdrop-blur-md p-5 dark:border-slate-800/80 dark:bg-slate-900/40 min-h-[300px]">
             <div className="flex justify-between mb-4">
@@ -116,7 +106,6 @@ export default function Infrastructure() {
           </div>
         </div>
 
-        {/* Row 3: HVAC Table Skeleton */}
         <div className="rounded-2xl border border-slate-200/80 bg-white/50 backdrop-blur-md p-5 dark:border-slate-800/80 dark:bg-slate-900/40 min-h-[250px] flex flex-col">
           <div className="flex justify-between mb-6">
             <Skeleton className="h-4 w-48" />
@@ -128,7 +117,6 @@ export default function Infrastructure() {
           </div>
         </div>
 
-        {/* Row 4: Diagnostics & Maintenance Skeleton */}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <div className="lg:col-span-2 flex flex-col rounded-2xl border border-slate-200/80 bg-white/50 backdrop-blur-md p-5 dark:border-slate-800/80 dark:bg-slate-900/40 min-h-[300px]">
             <div className="flex justify-between mb-4">
@@ -160,7 +148,7 @@ export default function Infrastructure() {
   }
 
   // =========================================================================
-  // DATA MAPPING (Now with formatMetric applied!)
+  // DATA MAPPING
   // =========================================================================
   const kpis = [
     { label: "Overall Integrity", value: `${formatMetric(data.structural_health?.structural_integrity_percent, 1)}%`, status: "ok", icon: ShieldCheck },
@@ -175,6 +163,7 @@ export default function Infrastructure() {
       zone: "Living Quarters", 
       status: data.modules?.living_quarters?.status === "operational" ? "ok" : "warn", 
       rpm: Math.round((data.systems?.hvac_main?.performance?.air_circulation_cfm ?? 5500) / 5), 
+      // Leave targets and currents as numbers here so the HvacTable can calculate warnings
       target: data.modules?.living_quarters?.thermal_management?.temperature_setpoint_c ?? 20, 
       current: data.modules?.living_quarters?.thermal_management?.indoor_temperature_c ?? 18 
     },
@@ -202,7 +191,7 @@ export default function Infrastructure() {
     id: al.id,
     status: al.status,
     cycles: al.cycles,
-    pressureDrop: `${formatMetric(al.pressureDrop_psi, 3)} psi`
+    pressureDrop: `${formatMetric(al.pressureDrop_psi, 2)} psi` // Changed to 2 decimals max
   }));
 
   return (
