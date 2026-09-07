@@ -13,10 +13,12 @@ const generateTokenAndSetCookie = (res, user) => {
         { expiresIn: '1d' }
     );
 
+    const isProduction = process.env.NODE_ENV === 'production';
+
     res.cookie('polar_jwt', token, {
         httpOnly: true,
-        secure: process.env.NODE_ENV !== 'development',
-        sameSite: 'strict',
+        secure: isProduction, // Requires HTTPS in production
+        sameSite: isProduction ? 'none' : 'strict', // Allows cross-site cookie sharing from Vercel to Render
         maxAge: 24 * 60 * 60 * 1000
     });
 };
