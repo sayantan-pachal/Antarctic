@@ -1,8 +1,8 @@
-import React from 'react';
+
 import { MapPin } from "lucide-react";
 
 export default function AntarcticMap({ activeStation = "Maitri" }) {
-    const mapUrl = "https://upload.wikimedia.org/wikipedia/commons/thumb/2/24/Antarctica_relief_location_map.jpg/960px-Antarctica_relief_location_map.jpg";
+    const mapUrl = "/models/image.png";
 
     // Determine which stations should pulse and highlight
     const highlightMaitri = activeStation === "Maitri" || activeStation === "Both";
