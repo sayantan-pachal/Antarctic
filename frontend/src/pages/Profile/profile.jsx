@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 import { Mail, MapPin, Shield, Calendar, User as UserIcon } from "lucide-react";
 // Adjust this import path depending on where your reusable components are stored
 import AntarcticMap from "../../components/Others/AntarcticMap"; 

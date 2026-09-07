@@ -9,6 +9,7 @@ dotenv.config();
  
 const app = express(); 
  
+
 // Middlewares 
 app.use(cors({ 
   origin: process.env.CLIENT_URL || 'http://localhost:5173',  
