@@ -5,11 +5,6 @@ const { getLogisticsStream } = require('../controllers/logisticsController');
 const { protect, authorizeStationAccess } = require('../middleware/authMiddleware');
 
 
-// 0. Health check endpoint to prevent Render from sleeping & verify server status
-router.get('/health', (req, res) => {
-    res.status(200).json({ status: "success", message: "Polar Twin Core Operational" });
-});
-
 // 1. GET Logistics Data (Sliced - e.g., /api/logistics/Maitri/supplies/data)
 router.get('/:stationId/:section/data', protect, authorizeStationAccess, getLogisticsStream);
 
