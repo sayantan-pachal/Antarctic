@@ -56,6 +56,7 @@ export const authAPI = {
 
         const response = await fetch(`${BASE_URL}/users/register`, {
             method: 'POST',
+            credentials: 'include',
             // NOTE: Do NOT set 'Content-Type' manually when sending FormData.
             // The browser will automatically set the correct multipart/form-data boundary.
             body: formData 
@@ -141,6 +142,7 @@ export const authAPI = {
         return data;
     },
     
+    // 7. SEND REGISTRATION OTP
     sendRegistrationOtp: async (dataPayload) => {
         if (USE_MOCK_API) {
             await delay(600);
